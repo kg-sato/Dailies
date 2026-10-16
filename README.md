@@ -71,3 +71,13 @@ Tests cover concurrent daily generation, persistence, 14-day capacity, shortages
 2. Add source adapters and curated topic/difficulty mapping for Waterloo, DMOJ, USACO, and USACO Guide.
 3. Add diagnostic onboarding and refine recommendations from real practice results.
 4. Add authenticated private hosting and cross-device sync before public access.
+
+## Euclid goal update
+
+The math track now targets a personal goal of **75/100 on Euclid**. Distinction is the top 25% of competitors, not a fixed score threshold ([CEMC](https://cemc.uwaterloo.ca/contests/euclid)). This is a practice goal, not a score prediction.
+
+The catalog includes **28 additional original Euclid-preparation problems**: 14 core and 14 stretch, with worked solutions. These are unofficial estimated bands, not past Waterloo questions or calibrated Euclid question numbers. Independent enumeration tests check several counting and number-theory answer keys. Numeric marking checks the final answer only; write out reasoning separately and compare it with the solution.
+
+Default math level is now 4. At this level, daily selection alternates a level-4 core problem with a level-5 stretch problem. Basic starter drills stay accessible in the library but are excluded from daily sets at math levels 3 and above. There are two weeks of fresh Euclid math pairs. Once these run out, the app reports a shortage instead of reverting to basic drills. Estimated daily time is now about **41 minutes** including coding; adjust the workload in Settings if needed.
+
+For an existing database, `python upgrade_euclid.py` explicitly sets the math baseline to 4 and replaces only today's unattempted basic math assignments. It first saves a local JSON backup. Superseded assignment identities remain in the database and exports, preventing accidental reassignment. Coding and attempted problems are preserved. Do not rerun the command if you have intentionally chosen a different math baseline.

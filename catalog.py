@@ -1,5 +1,6 @@
 """Original, independently checkable exercises plus source-only contest references."""
 from fractions import Fraction
+from euclid_catalog import euclid_catalog
 
 
 def original(n, title, topic, statement, answer, solution, difficulty=2, kind='numeric', choices=None):
@@ -77,4 +78,4 @@ def seed_catalog():
             reuse_status='reference_only',attribution='University of Waterloo CEMC; judge: DMOJ',
             statement='',answer_type='external',answer='',solution='',answer_verified=False,
             choices=[],active=True))
-    return rows
+    return rows + euclid_catalog()

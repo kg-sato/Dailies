@@ -32,7 +32,7 @@ class DailiesTests(unittest.TestCase):
         for i in range(14):
             d=core.daily(now+timedelta(days=i));self.assertEqual(len(d['problems']),3)
             for p in d['problems']:self.assertNotIn(p['canonical_id'],seen);seen.add(p['canonical_id'])
-        d=core.daily(now+timedelta(days=30));self.assertEqual(len(d['problems']),3)
+        d=core.daily(now+timedelta(days=30));self.assertEqual(len(d['problems']),1)
         d=core.daily(now+timedelta(days=31));self.assertTrue(d['shortages'])
 
     def test_exact_numeric_checks_and_invalid_input(self):
@@ -82,12 +82,12 @@ class DailiesTests(unittest.TestCase):
 
     def test_import_validation_and_approval(self):
         p=copy.deepcopy(core.seed_catalog()[0]);p['id']='new-problem';p['canonical_id']='new'
-        core.import_catalog([p]);self.assertEqual(len(core.export_data()['problems']),48)
+        core.import_catalog([p]);self.assertEqual(len(core.export_data()['problems']),len(core.seed_catalog()))
         bad=copy.deepcopy(p);bad['answer_verified']=False
         with self.assertRaises(ValueError):core.import_catalog([bad],True)
         bad=copy.deepcopy(p);bad['reuse_status']='reference_only'
         with self.assertRaises(ValueError):core.import_catalog([bad],True)
-        core.import_catalog([p],True);self.assertEqual(len(core.export_data()['problems']),49)
+        core.import_catalog([p],True);self.assertEqual(len(core.export_data()['problems']),len(core.seed_catalog())+1)
         with self.assertRaises(ValueError):core.import_catalog([p],True)
 
     def test_settings_adaptation_and_api_guards(self):
@@ -96,7 +96,7 @@ class DailiesTests(unittest.TestCase):
         self.assertEqual(self.client.put('/api/settings',json={},headers={'Origin':'https://evil.example'}).status_code,403)
         self.assertEqual(self.client.post('/api/problems/math-01/attempts',json={'answer':'7','difficulty':'invalid'}).status_code,400)
         for _ in range(5):core.submit('math-01',{'answer':'7','difficulty':'easy'})
-        with core.connect() as db:self.assertEqual(core.target_level(db,'math',core.preferences(db)),3)
+        with core.connect() as db:self.assertEqual(core.target_level(db,'math',core.preferences(db)),5)
         self.assertEqual(self.client.get('/').status_code,200)
         s=self.client.get('/api/settings').json();s['csmc_year']=2024
         out=self.client.put('/api/settings',json=s).json();self.assertIn('CSMC 2024',out['completed_contests']);self.assertNotIn('CSMC *',out['completed_contests'])

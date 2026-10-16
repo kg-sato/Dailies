@@ -12,7 +12,7 @@ from catalog import seed_catalog
 
 ROOT = Path(__file__).parent
 DEFAULTS = dict(math_count=2, coding_count=1, timezone='America/Toronto',
-    math_level=2, coding_level=2, csmc_year=None,
+    math_level=4, coding_level=2, csmc_year=None,
     completed_contests=['CSMC *', 'Cayley 2025', 'CIMC 2024', 'CCC Junior 2025'])
 
 
@@ -166,23 +166,30 @@ def daily(now=None):
                 topics[r['topic']]=r['n']
             for track in ('math','coding'):
                 level=target_level(db,track,s)
-                candidates=[p for p in catalog(db) if p['active'] and p['track']==track and p['canonical_id'] not in used and not blocked(p,s) and p['difficulty']<=level+1]
+                floor=max(1,level-1) if track=='math' else 1
+                candidates=[p for p in catalog(db) if p['active'] and p['track']==track and p['canonical_id'] not in used and not blocked(p,s) and floor<=p['difficulty']<=level+1 and not (track=='math' and level>=3 and p['source']=='Dailies Originals')]
                 candidates.sort(key=lambda p:(abs(p['difficulty']-level),topics.get(p['topic'],0),p['id']))
                 count=s[track+'_count']; chosen=[]
                 while candidates and len(chosen)<count:
+                    desired=min(5,level+(len(chosen)%2)) if track=='math' else level
+                    candidates.sort(key=lambda x:(abs(x['difficulty']-desired),x['topic'] in [v['topic'] for v in chosen],topics.get(x['topic'],0),x['id']))
                     p=candidates.pop(0)
                     if p['canonical_id'] in used: continue
                     used.add(p['canonical_id']); chosen.append(p)
                     candidates.sort(key=lambda x:(x['topic'] in [v['topic'] for v in chosen],abs(x['difficulty']-level),topics.get(x['topic'],0),x['id']))
                 for p in chosen:
-                    selected.append((p,f'{p["topic"].capitalize()} practice at level {p["difficulty"]}; your current {track} target is {level}.'))
+                    reason=f'{p["topic"].capitalize()} practice at level {p["difficulty"]}; your current {track} target is {level}.'
+                    if track=='math' and level>=4:
+                        role='Stretch reasoning' if p['difficulty']>level else 'Core problem solving'
+                        reason=f'{role} for your Euclid 75/100 goal. Write a full solution before checking the final answer. Difficulty is estimated.'
+                    selected.append((p,reason))
                 if len(chosen)<count: shortages.append(f'{track.capitalize()}: only {len(chosen)} of {count} suitable unseen problems available. Import reviewed problems to expand your catalog.')
             db.execute('INSERT INTO days VALUES(?,?,?)',(day,s['timezone'],json.dumps(shortages)))
             for pos,(p,reason) in enumerate(selected):
                 db.execute('INSERT INTO assignments VALUES(?,?,?,?,?)',(day,pos,p['id'],p['canonical_id'],reason))
         stored=db.execute('SELECT * FROM days WHERE date=?',(day,)).fetchone()
         items=[]
-        for r in db.execute('SELECT a.reason,p.payload FROM assignments a JOIN problems p ON p.id=a.problem_id WHERE a.date=? ORDER BY position',(day,)):
+        for r in db.execute("SELECT a.reason,p.payload FROM assignments a JOIN problems p ON p.id=a.problem_id WHERE a.date=? AND a.reason NOT LIKE 'Superseded:%' ORDER BY json_extract(p.payload,'$.track') DESC,a.position",(day,)):
             p=public_problem(json.loads(r['payload'])); p['reason']=r['reason']; p['latest_attempt']=latest(db,p['id']); items.append(p)
         return dict(date=day,timezone=stored['timezone'],problems=items,shortages=json.loads(stored['shortage']),minutes=sum(p['minutes'] for p in items))
 
